@@ -5,7 +5,7 @@
   description = Sub-theme of AdaptiveTheme for the Time website
   core        = 7.x
   engine      = phptemplate
-  screenshot  = screenshot.png
+  screenshot  = images/time-screenshot.png
   base theme  = adaptivetheme
 
 
