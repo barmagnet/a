@@ -7,3 +7,7 @@
   padding: 25px;
 }
 
+#comments .view-no-results {
+  margin-bottom: 20px;
+  margin-left: 10px;
+}

@@ -66,7 +66,7 @@
     <?php if ( strpos( $comments_all, 'views-row-first' ) !== FALSE ): ?>
       <?php print $comments_all; ?>
     <?php else: ?>
-      <div class="view-no-results"><?php print t('No results'); ?></div>
+      <div class="view-no-results"><?php print t('No requests yet'); ?></div>
     <?php endif; ?>
 
   <?php else: ?>
