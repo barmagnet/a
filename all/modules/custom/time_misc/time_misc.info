@@ -1,0 +1,5 @@
+; $Id
+name = Time misc
+description = Small customisations for the Time website.
+package = Custom
+core = 7.x
