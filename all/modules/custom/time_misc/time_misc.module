@@ -12,7 +12,7 @@
 function time_misc_views_post_execute( &$view ) {
 
   switch ( $view->name ) {
-  case 'available_jobs' :
+  case 'any_view_where_multiple_value_date_fields_are_used' :
     _time_misc_remove_duplicate_nodes( $view );
     break;
   }
@@ -41,3 +41,8 @@ function _time_misc_remove_duplicate_nodes( &$view ) {
 
   $view->result = $new_view_result;
 }
+
+function time_misc_form_comment_node_job_form_alter(&$form, &$form_state) {
+  $form['actions']['submit']['#value'] = t("Request this job");
+}
+
