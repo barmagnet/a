@@ -152,7 +152,7 @@ class RulesTokenEvaluator extends RulesDataInputEvaluator {
   public function prepare($text, $var_info) {
     $text = is_array($text) ? implode('', $text) : $text;
     // Skip this evaluator if there are no tokens.
-    $this->setting = token_scan($text) ? TRUE : NULL;
+    $this->setting = token_scan($text) || _rules_system_find_variables($text) ? TRUE : NULL;
   }
 
   /**
@@ -170,6 +170,18 @@ class RulesTokenEvaluator extends RulesDataInputEvaluator {
     $data = array();
     // We also support replacing tokens in a list of textual values.
     $whole_text = is_array($text) ? implode('', $text) : $text;
+
+    // Process variable tokens.
+    foreach (_rules_system_find_variables($whole_text) as $var_name => $token) {
+      $var_name = str_replace('-', '_', $var_name);
+      if (isset($var_info[$var_name]) && _rules_system_valid_text_type($var_info[$var_name]['type'])) {
+        $type = $var_info[$var_name]['type'];
+        $data = rules_unwrap_data(array($type => $state->get($var_name)), array($type => $var_info[$var_name]));
+        $replacements[$token] = $data[$type];
+      }
+    }
+
+    // Process real tokens.
     foreach (token_scan($whole_text) as $var_name => $tokens) {
       $var_name = str_replace('-', '_', $var_name);
       if (isset($var_info[$var_name]) && ($token_type = _rules_system_token_map_type($var_info[$var_name]['type']))) {
@@ -209,6 +221,26 @@ class RulesTokenEvaluator extends RulesDataInputEvaluator {
       '#description' => t('Note that token replacements containing chained objects – such as [node:author:uid] – are not listed here, but are still available. The <em>data selection</em> input mode may help you find more complex replacement patterns. See <a href="@url">the online documentation</a> for more information about complex replacement patterns.',
         array('@url' => rules_external_help('chained-tokens'))),
     );
+
+    // Add token information for variables.
+    $rows = array();
+    foreach ($var_info as $var_name => $info) {
+      if (_rules_system_valid_text_type($info['type'])) {
+        $token = '[' . str_replace('_', '-', $var_name) . ']';
+        $description = !empty($info['description']) ? $info['description'] : '';
+        $rows[] = array(check_plain($token), check_plain($info['label']), check_plain($description));
+      }
+    };
+    if ($rows) {
+      $render['rules_variables'] = array(
+        '#theme' => 'table',
+        '#header' => array(t('Token'), t('Label'), t('Description')),
+        '#prefix' => '<h3>' . t('Replacement patterns for Rules variables') . '</h3>',
+        '#rows' => $rows,
+      );
+    }
+
+    // Add token information for real tokens.
     $token_info = token_info();
     foreach ($var_info as $name => $info) {
       $token_types[$name] = _rules_system_token_map_type($info['type']);
@@ -244,6 +276,40 @@ function _rules_system_token_map_type($type) {
     return $cache['data_info'][$type]['token type'];
   }
   return $type;
+}
+
+/**
+ * Find variable tokens in a string of text. Variable tokens look like
+ * typical tokens, but *cannot* include colons.
+ *
+ * Valid: [my-variable] or [my_variable]
+ * Not valid: [my-variable:my-text-property]
+ */
+function _rules_system_find_variables($text) {
+  // Derived from token_scan() regex.
+  preg_match_all('/\[([^\s\[\]:]*)\]/x', $text, $matches);
+  $var_names = $matches[1];
+  $results = array();
+  for ($i = 0; $i < count($var_names); $i++) {
+    $results[$var_names[$i]] = $matches[0][$i];
+  }
+  return $results;
+}
+
+/**
+ * Determine whether a variable type is suitable for embedding inside text.
+ * Also check the parent data type if there is one.
+ */
+function _rules_system_valid_text_type($type) {
+  $data_types = rules_fetch_data('data_info');
+  $valid_types = array('text', 'text_formatted', 'integer', 'decimal', 'uri');
+  if (in_array($type, $valid_types)) {
+    return TRUE;
+  }
+  elseif (!empty($data_types[$type]['parent']) && in_array($data_types[$type]['parent'], $valid_types)) {
+    return TRUE;
+  }
+  return FALSE;
 }
 
 /**
