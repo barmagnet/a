@@ -1,0 +1,5 @@
+; $Id
+name = Time multi date
+description = Fixes and improvements related to multi-date fields
+package = Custom
+core = 7.x

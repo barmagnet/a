@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * @file
+ * Fixes and enhancements relating to multi-date fields.
+ */
+
+
+/*
+ * Implements hook_views_post_execute()
+ */
+function time_multi_date_views_post_execute( &$view ) {
+
+  switch ( $view->name ) {
+  case 'any_view_where_multiple_value_date_fields_are_used' :
+    _time_multi_date_remove_duplicate_nodes( $view );
+    break;
+  }
+}
+
+/**
+ * Remove duplicate rows from an executed node view.
+ *
+ * @param $view
+ *   The view object passed to hook_views_post_execute()
+ */
+function _time_multi_date_remove_duplicate_nodes( &$view ) {
+
+  $nids_found = array();
+  $new_view_result = array();
+
+  foreach ( $view->result as $row )
+  {
+    // Is this the first time we've seen the filter value of this row?
+    if ( ! in_array( $row->nid, $nids_found ) )
+    {
+      $new_view_result[] = $row;
+      $nids_found[] = $row->nid;
+    }
+  }
+
+  $view->result = $new_view_result;
+}
