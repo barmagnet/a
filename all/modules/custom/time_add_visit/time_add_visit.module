@@ -1,0 +1,90 @@
+<?php
+
+/**
+ * @file
+ * Modifications to Visit creation
+ */
+
+
+function time_add_visit_permission() {
+  return array(
+    'create visits for other users' => array(
+      'title' => 'Create visits for other users',
+    )
+  );
+}
+
+function time_add_visit_form_visit_node_form_alter(&$form, &$form_state) {
+
+  // Expecting args:
+  //   (0) node, (1) add, (2) visit, (3) optional node id of relevant Job
+  $job_nid = arg(3);
+
+  // Does the URL path contain a relevant Job?
+  if ( !empty( $job_nid ) ) {
+
+    $sw_options = time_add_visit_get_support_worker_field_options(
+        $job_nid, $form['field_visit_sw']['und']['#options'] );
+
+    if ( user_access( 'create visits for other users' ) ) {
+      $form['field_visit_sw']['und']['#options'] = $sw_options;
+    }
+    else {
+      global $user;
+
+      // The current user can only create Visits for themself.
+      // Is the current user in the list of options?
+      if ( array_key_exists( $user->uid, $sw_options ) ) {
+
+        $form['field_visit_sw']['und']['#options'] = array(
+          $user->uid => $sw_options[$user->uid] );
+      }
+      else {
+        // Current user is neither assigned to relevant Job, nor
+        // allowed to create Visits for other users.
+        drupal_access_denied();
+        return;
+      }
+    }
+
+    // Force the Job field to refer to the relevant Job.
+    $job_options = $form['field_visit_job']['und']['#options'];
+    $form['field_visit_job']['und']['#options'] = array(
+      $job_nid => $job_options[$job_nid] );
+  }
+  else {
+
+    // No relevant job was supplied
+    // Is the current user unable to create an arbitrary visit?
+    if ( !user_access( 'create visits for other users' ) ) {
+        drupal_access_denied();
+        return;
+    }
+  }
+}
+
+function time_add_visit_get_support_worker_field_options( $job_nid, $original_options ) {
+
+  $job_node = node_load( $job_nid );
+  dsm( $job_node );
+
+  // Collect the user IDs of any Support workers assigned to the
+  // relevant Job.
+  $user_ids = array( '_none' );
+  if ( ! empty( $job_node->field_job_assignee['und'] ) ) {
+    foreach ( $job_node->field_job_assignee['und'] as $assignee ) {
+      $user_ids[] = $assignee['target_id'];
+    }
+  }
+  dsm( $user_ids );
+
+  // Build an options array from the collected user IDs and the original set
+  // of options.
+  $options = array();
+  foreach ( $user_ids as $uid ) {
+    $options[$uid] = $original_options[$uid];
+  }
+  dsm( $options );
+
+  return $options;
+}

@@ -1,0 +1,5 @@
+; $Id
+name = Time add visit
+description = Modifications to Visit creation.
+package = Custom
+core = 7.x
