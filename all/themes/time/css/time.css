@@ -11,3 +11,8 @@
   margin-bottom: 20px;
   margin-left: 10px;
 }
+
+#block-time-add-visit-go-to-add-visit .block-content {
+  float:right;
+  margin-right: 25px;
+}
