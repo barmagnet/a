@@ -8,9 +8,16 @@
 
 function time_add_visit_permission() {
   return array(
+
     'create visits for other users' => array(
       'title' => 'Create visits for other users',
-    )
+      'description' => 'Can create Visits for existing Jobs, where the visiting user (if any) is assigned to that Job.',
+    ),
+
+    'create arbitrary visits' => array(
+      'title' => 'Create arbitrary visits',
+      'description' => 'Can create Visits without any restrictions at all.',
+    ),
   );
 }
 
@@ -23,7 +30,7 @@ function time_add_visit_menu_alter(&$items) {
 
 function _time_add_visit_add_visit_access( $op, $node ) {
   return ( node_access( $op, $node ) &&
-    user_access( 'create visits for other users' ) );
+    user_access( 'create arbitrary visits' ) );
 }
 
 function time_add_visit_menu() {
@@ -31,7 +38,7 @@ function time_add_visit_menu() {
 
     'job/%node/add-visit' => array(
       'description' => 'Add a Visit for a given Job',
-      'access callback' => '_time_add_visit_page_access',
+      'access callback' => 'time_add_visit_page_access',
       'access arguments' => array(1),
       'title callback' => '_time_add_visit_page_title',
       'title arguments' => array(1),
@@ -42,19 +49,22 @@ function time_add_visit_menu() {
   );
 }
 
-function _time_add_visit_page_access( $job ) {
+function time_add_visit_page_access( $job, $verbose=TRUE ) {
 
   if ( ! node_access( 'create', 'visit' ) ) {
-    drupal_set_message(
-      t( 'You do not have permission to add Visits.' ),
-      'error'
-    );
+
+    if ( $verbose ) {
+      drupal_set_message(
+        t( 'You do not have permission to add Visits.' ), 'error' );
+    }
     return FALSE;
+
   }
   else if ( user_access( 'create visits for other users' ) ) {
     return TRUE;
   }
   else {
+
     global $user;
     $is_assigned =  _time_add_visit_is_user_assigned_to_job( $job, $user );
 
@@ -62,15 +72,13 @@ function _time_add_visit_page_access( $job ) {
       return TRUE;
     }
     else {
-      drupal_set_message(
-        t(
-          'You cannot add a Visit for Job @nid, because you have not been assigned to that Job',
-          array( '@nid' => $job->nid )
-        ),
-        'error'
-      );
+      if ( $verbose ) {
+        $msg = 'You cannot add a Visit for Job @nid, because you have not been assigned to that Job';
+        drupal_set_message( t( $msg, array('@nid' => $job->nid) ), 'error');
+      }
       return FALSE;
     }
+
   }
 }
   
