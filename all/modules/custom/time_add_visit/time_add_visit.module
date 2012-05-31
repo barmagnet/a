@@ -172,3 +172,68 @@ function _time_add_visit_get_assigned_user_ids( $job ) {
   return $result;
 }
 
+function time_add_visit_block_info() {
+  return array(
+
+    'go-to-add-visit' => array(
+      'info' => 'Got to add-visit page for current job',
+      'cache' => DRUPAL_CACHE_PER_USER,
+    ),
+  );
+}
+
+function time_add_visit_block_view( $delta ) {
+
+  switch ( $delta ) {
+  case 'go-to-add-visit':
+    return array( 'content' => _time_add_visit_go_to_add_visit_block_content() );
+  }
+}
+
+function _time_add_visit_go_to_add_visit_block_content() {
+
+  $op = arg(2);
+  $is_viewing_node =
+    arg(0) == 'node'  &&  is_numeric( arg(1) ) &&  empty( $op );
+
+  if ( ! $is_viewing_node ) {
+    return '';
+    // @todo use context module or path alias to stop block showing
+    // on sub-paths of node view, e.g. node/view/edit
+    //return t('Error: "Add visit" block on page other than node-view' );
+  }
+
+  $node = node_load( arg(1) );
+
+  if ( $node->type != 'job' ) {
+    return '';
+    // @todo use context module or path alias to stop block showing
+    // when viewing nodes other than Jobs.
+    //return t('Error: "Add visit" block on non-job node-view page' );
+  }
+
+  if ( ! time_add_visit_page_access( $node, FALSE ) ) {
+    return '';
+  }
+
+  return drupal_get_form( '_time_add_visit_go_to_add_visit_form' );
+}
+
+function _time_add_visit_go_to_add_visit_form($form, &$form_state) {
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Add visit'),
+  );
+  $form['job-nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(1),
+  );
+  return $form;
+}
+
+function _time_add_visit_go_to_add_visit_form_submit($form, &$form_state) {
+  //dsm( $form_state );
+  $form_state['redirect'] =
+     'job/' . $form_state['values']['job-nid'] . '/add-visit' ;
+  //dsm( $form_state );
+}
