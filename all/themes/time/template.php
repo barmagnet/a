@@ -58,6 +58,10 @@ function time_preprocess_html(&$vars) {
 
 }
 
+function time_form_comment_node_job_form_alter(&$form, &$form_state) {
+  $form['actions']['submit']['#value'] = t("Request this job");
+}
+
 /* -- Delete this line if you want to use this function
 function time_process_html(&$vars) {
 }

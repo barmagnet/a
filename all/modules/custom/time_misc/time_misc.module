@@ -6,6 +6,3 @@
  */
 
 
-function time_misc_form_comment_node_job_form_alter(&$form, &$form_state) {
-  $form['actions']['submit']['#value'] = t("Request this job");
-}
