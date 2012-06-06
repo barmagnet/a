@@ -5,4 +5,63 @@
  * Small customisations for the Time website.
  */
 
+/**
+ * To use a function in a custom module instead of writing the code in text area create a function that looks like:
 
+function computed_field_YOUR_FIELD_MACHINE_NAME_compute(&$entity_field, $entity_type, $entity, $field, $instance, $langcode, $items) {
+  $entity_field[0]['value'] = 'value';
+}
+
+Parameters:
+&$entity_field - The computed field. Used to store the computed value.
+$entity_type - The entity type: node, user, comment, etc.
+$entity - The actual entity (a node, user, comment, etc.)
+$field - General field settings.
+$instance - Field instance settings.
+$items - The list of items.
+Note:
+Make sure $entity_field is passed by reference.
+
+ */
+
+
+function computed_field_field_job_deadline_compute(
+  &$entity_field,
+  $entity_type,
+  $entity,
+  $field,
+  $instance,
+  $langcode,
+  $items
+){
+  dsm( func_get_args() );
+
+  if ( $entity_type != 'node' || $entity->type != 'job' ) {
+    return;
+  }
+
+  $job_nid = $entity->nid;
+
+  $query = db_select( 'field_data_field_visit_job', 'job' );
+  $query->join( 'node', 'n', 'job.revision_id = n.vid'  );
+  $query->join(
+    'field_data_field_visit_date', 'date', 'date.revision_id = n.vid'  );
+  $query->leftJoin(
+    'field_data_field_visit_sw', 'sw', 'sw.revision_id = n.vid'  );
+  
+  $query
+    ->fields( 'date', array( 'field_visit_date_value' ) )
+    ->condition( 'job.field_visit_job_target_id', $job_nid )
+    ->condition( 'n.status', 1 )
+    ->condition( 'sw.field_visit_sw_target_id', NULL )
+    ->orderBy( 'date.field_visit_date_value', 'ASC' )
+    ->range( 0, 1 );
+
+  dsm( $query->__toString() );
+
+  $result = $query->execute()->fetchField();
+
+  dsm( $result );
+
+  $entity_field[0]['value'] = $result ? $result : '';
+}
