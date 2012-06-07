@@ -34,7 +34,7 @@ function computed_field_field_job_deadline_compute(
   $langcode,
   $items
 ){
-  dsm( func_get_args() );
+  //dsm( func_get_args() );
 
   if ( $entity_type != 'node' || $entity->type != 'job' ) {
     return;
@@ -46,6 +46,9 @@ function computed_field_field_job_deadline_compute(
   $query->join( 'node', 'n', 'job.revision_id = n.vid'  );
   $query->join(
     'field_data_field_visit_date', 'date', 'date.revision_id = n.vid'  );
+
+  // Doing a left join here because the information we want is about
+  // those Visits with no support-worker assigned.
   $query->leftJoin(
     'field_data_field_visit_sw', 'sw', 'sw.revision_id = n.vid'  );
   
@@ -57,11 +60,113 @@ function computed_field_field_job_deadline_compute(
     ->orderBy( 'date.field_visit_date_value', 'ASC' )
     ->range( 0, 1 );
 
-  dsm( $query->__toString() );
+  //dsm( $query->__toString() );
 
   $result = $query->execute()->fetchField();
 
-  dsm( $result );
+  //dsm( $result );
 
   $entity_field[0]['value'] = $result ? $result : '';
 }
+
+
+function time_misc_node_presave( $node ) {
+  dsm( $node );
+
+  if ( $node->type != 'visit' ) {
+    return;
+  }
+  else if ( _time_misc_is_change_in_relevant_job( $node ) ) {
+
+    _time_misc_queue_resaving_relevant_jobs( $node );
+    //dsm( 'job change');
+  }
+  else if ( _time_misc_is_relevant_job( $node ) ) {
+
+    if ( _time_misc_is_change_in_assigned_status( $node )  ||
+      _time_misc_is_change_in_time( $node ) ) {
+
+        _time_misc_queue_resaving_relevant_jobs( $node );
+        //dsm( 'time or sw change');
+      }
+  }
+
+  dsm( _time_misc_queued_relevant_jobs() );
+}
+
+function _time_misc_is_change_in_relevant_job( $visit ) {
+  $relevant_jobs = _time_misc_get_relevant_jobs( $visit );
+  return $relevant_jobs['prev'] != $relevant_jobs['cur'];
+}
+
+function _time_misc_is_relevant_job( $visit ) {
+  $relevant_jobs = _time_misc_get_relevant_jobs( $visit );
+  return ! empty( $relevant_jobs['cur'] );
+} 
+
+function _time_misc_is_change_in_assigned_status( $visit ) {
+
+  return
+    empty( $visit->original->field_visit_sw['und'][0]['target_id'] )
+    !=
+    empty( $visit->field_visit_sw['und'][0]['target_id'] );
+}
+
+function _time_misc_is_change_in_time( $visit ) {
+
+  $prev_date = NULL;
+  if ( ! empty( $visit->original->field_visit_date['und'][0]['value'] ) ) {
+    $prev_date = $visit->original->field_visit_date['und'][0]['value'];
+  }
+
+  $cur_date = NULL;
+  if ( ! empty( $visit->field_visit_date['und'][0]['value'] ) ) {
+    $cur_date = $visit->field_visit_date['und'][0]['value'];
+  }
+
+  return $prev_date != $cur_date;
+}
+
+function _time_misc_queue_resaving_relevant_jobs( $visit ) {
+  $relevant_jobs = _time_misc_get_relevant_jobs( $visit );
+
+  if ( ! $relevant_jobs['cur'] ) {
+    unset( $relevant_jobs['cur'] );
+  }
+  if ( ! $relevant_jobs['prev'] ) {
+    unset( $relevant_jobs['prev'] );
+  }
+  if ( count( $relevant_jobs ) == 2  &&
+    $relevant_jobs['cur'] == $relevant_jobs['prev'] ) {
+      unset( $relevant_jobs['prev'] );
+    }
+
+  if ( count( $relevant_jobs > 0 ) ) {
+    _time_misc_queued_relevant_jobs( $relevant_jobs );
+  }
+}
+
+function _time_misc_get_relevant_jobs( $visit ) {
+
+  $prev_job = NULL;
+  if ( ! empty( $visit->original->field_visit_job['und'][0]['target_id'] ) ) {
+    $prev_job = $visit->original->field_visit_job['und'][0]['target_id'];
+  }
+
+  $cur_job = NULL;
+  if ( ! empty( $visit->field_visit_job['und'][0]['target_id'] ) ) {
+    $cur_job = $visit->field_visit_job['und'][0]['target_id'];
+  }
+
+  return array( 'prev' => $prev_job, 'cur' => $cur_job );
+}
+
+function _time_misc_queued_relevant_jobs( $job_nids = NULL ) {
+
+  static $queued_job_nids = array();
+  if( $job_nids ) {
+    $queued_job_nids = $job_nids;
+  }
+  return $queued_job_nids;
+}
+
