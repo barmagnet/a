@@ -69,9 +69,8 @@ function computed_field_field_job_deadline_compute(
   $entity_field[0]['value'] = $result ? $result : '';
 }
 
-
 function time_misc_node_presave( $node ) {
-  dsm( $node );
+  //dsm( $node );
 
   if ( $node->type != 'visit' ) {
     return;
@@ -91,7 +90,22 @@ function time_misc_node_presave( $node ) {
       }
   }
 
-  dsm( _time_misc_queued_relevant_jobs() );
+  $queue = _time_misc_jobs_queue();
+  //dsm( $queue->getJobs() );
+}
+
+function time_misc_node_insert( $node ) {
+  if ( $node->type == 'visit' ) {
+    $queue = _time_misc_jobs_queue();
+    $queue->resaveJobs();
+  }
+}
+
+function time_misc_node_update( $node ) {
+  if ( $node->type == 'visit' ) {
+    $queue = _time_misc_jobs_queue();
+    $queue->resaveJobs();
+  }
 }
 
 function _time_misc_is_change_in_relevant_job( $visit ) {
@@ -141,9 +155,8 @@ function _time_misc_queue_resaving_relevant_jobs( $visit ) {
       unset( $relevant_jobs['prev'] );
     }
 
-  if ( count( $relevant_jobs > 0 ) ) {
-    _time_misc_queued_relevant_jobs( $relevant_jobs );
-  }
+  $queue = _time_misc_jobs_queue();
+  $queue->setJobs( $relevant_jobs );
 }
 
 function _time_misc_get_relevant_jobs( $visit ) {
@@ -161,12 +174,37 @@ function _time_misc_get_relevant_jobs( $visit ) {
   return array( 'prev' => $prev_job, 'cur' => $cur_job );
 }
 
-function _time_misc_queued_relevant_jobs( $job_nids = NULL ) {
+class time_misc_JobsResaveQueue {
 
-  static $queued_job_nids = array();
-  if( $job_nids ) {
-    $queued_job_nids = $job_nids;
+  private $theQueue = array();
+
+  public function getJobs() {
+    return $this->theQueue;
   }
-  return $queued_job_nids;
+
+  public function setJobs( $job_nids ) {
+    $this->theQueue = $job_nids;
+  }
+
+  private function discardJobs() {
+    $this->theQueue = array();
+  }
+
+  public function resaveJobs() {
+    if ( is_array( $this->theQueue ) ) {
+      foreach ( $this->theQueue as $nid ) {
+        node_save( node_load( $nid ) );
+      }
+      $this->discardJobs();
+    }
+  }
+}
+
+function _time_misc_jobs_queue() {
+  static $x = NULL;
+  if ( is_null( $x ) ) {
+    $x = new time_misc_JobsResaveQueue();
+  }
+  return $x;
 }
 
