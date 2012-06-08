@@ -183,10 +183,5 @@ function time_job_deadline_views_query_alter($view) {
   if($view->name == 'available_jobs' && !empty( $view->query ) ) {
     $view->query->orderby[0]['field'] =
       "(field_data_field_job_deadline_field_job_deadline_value = '')";
-    dsm( __FUNCTION__ );
-    dsm($view);
-  }
-  else {
-    dsm( $view );
   }
 }
