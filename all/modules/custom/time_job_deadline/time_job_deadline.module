@@ -1,0 +1,177 @@
+<?php
+
+/**
+ * @file
+ * Manage the calculation of job deadlines.
+ */
+
+function computed_field_field_job_deadline_compute(
+  &$entity_field,
+  $entity_type,
+  $entity,
+  $field,
+  $instance,
+  $langcode,
+  $items
+){
+  //dsm( func_get_args() );
+
+  if ( $entity_type != 'node' || $entity->type != 'job' ) {
+    return;
+  }
+
+  $job_nid = $entity->nid;
+
+  $query = db_select( 'field_data_field_visit_job', 'job' );
+  $query->join( 'node', 'n', 'job.revision_id = n.vid'  );
+  $query->join(
+    'field_data_field_visit_date', 'date', 'date.revision_id = n.vid'  );
+
+  // Doing a left join here because the information we want is about
+  // those Visits with no support-worker assigned.
+  $query->leftJoin(
+    'field_data_field_visit_sw', 'sw', 'sw.revision_id = n.vid'  );
+  
+  $query
+    ->fields( 'date', array( 'field_visit_date_value' ) )
+    ->condition( 'job.field_visit_job_target_id', $job_nid )
+    ->condition( 'n.status', 1 )
+    ->condition( 'sw.field_visit_sw_target_id', NULL )
+    ->orderBy( 'date.field_visit_date_value', 'ASC' )
+    ->range( 0, 1 );
+
+  //dsm( $query->__toString() );
+
+  $result = $query->execute()->fetchField();
+
+  //dsm( $result );
+
+  $entity_field[0]['value'] = $result ? $result : '';
+}
+
+function time_job_deadline_node_presave( $node ) {
+  //dsm( $node );
+
+  if ( $node->type != 'visit' ) {
+    return;
+  }
+  else if ( _time_job_deadline_is_change_in_relevant_job( $node ) ) {
+
+    _time_job_deadline_queue_resaving_relevant_jobs( $node );
+    //dsm( 'job change');
+  }
+  else if ( _time_job_deadline_is_relevant_job( $node ) ) {
+
+    if ( _time_job_deadline_is_change_in_assigned_status( $node )  ||
+      _time_job_deadline_is_change_in_time( $node ) ) {
+
+        _time_job_deadline_queue_resaving_relevant_jobs( $node );
+        //dsm( 'time or sw change');
+      }
+  }
+}
+
+function time_job_deadline_node_insert( $node ) {
+  if ( $node->type == 'visit' ) {
+    TimeJobDeadlineResaveQueue::resaveJobs();
+  }
+}
+
+function time_job_deadline_node_update( $node ) {
+  if ( $node->type == 'visit' ) {
+    TimeJobDeadlineResaveQueue::resaveJobs();
+  }
+}
+
+function _time_job_deadline_is_change_in_relevant_job( $visit ) {
+  $relevant_jobs = _time_job_deadline_get_relevant_jobs( $visit );
+  return $relevant_jobs['prev'] != $relevant_jobs['cur'];
+}
+
+function _time_job_deadline_is_relevant_job( $visit ) {
+  $relevant_jobs = _time_job_deadline_get_relevant_jobs( $visit );
+  return ! empty( $relevant_jobs['cur'] );
+} 
+
+function _time_job_deadline_is_change_in_assigned_status( $visit ) {
+
+  return
+    empty( $visit->original->field_visit_sw['und'][0]['target_id'] )
+    !=
+    empty( $visit->field_visit_sw['und'][0]['target_id'] );
+}
+
+function _time_job_deadline_is_change_in_time( $visit ) {
+
+  $prev_date = NULL;
+  if ( ! empty( $visit->original->field_visit_date['und'][0]['value'] ) ) {
+    $prev_date = $visit->original->field_visit_date['und'][0]['value'];
+  }
+
+  $cur_date = NULL;
+  if ( ! empty( $visit->field_visit_date['und'][0]['value'] ) ) {
+    $cur_date = $visit->field_visit_date['und'][0]['value'];
+  }
+
+  return $prev_date != $cur_date;
+}
+
+function _time_job_deadline_queue_resaving_relevant_jobs( $visit ) {
+  $relevant_jobs = _time_job_deadline_get_relevant_jobs( $visit );
+
+  if ( ! $relevant_jobs['cur'] ) {
+    unset( $relevant_jobs['cur'] );
+  }
+  if ( ! $relevant_jobs['prev'] ) {
+    unset( $relevant_jobs['prev'] );
+  }
+  if ( count( $relevant_jobs ) == 2  &&
+    $relevant_jobs['cur'] == $relevant_jobs['prev'] ) {
+      unset( $relevant_jobs['prev'] );
+    }
+
+  TimeJobDeadlineResaveQueue::setJobs( $relevant_jobs );
+}
+
+function _time_job_deadline_get_relevant_jobs( $visit ) {
+
+  $prev_job = NULL;
+  if ( ! empty( $visit->original->field_visit_job['und'][0]['target_id'] ) ) {
+    $prev_job = $visit->original->field_visit_job['und'][0]['target_id'];
+  }
+
+  $cur_job = NULL;
+  if ( ! empty( $visit->field_visit_job['und'][0]['target_id'] ) ) {
+    $cur_job = $visit->field_visit_job['und'][0]['target_id'];
+  }
+
+  return array( 'prev' => $prev_job, 'cur' => $cur_job );
+}
+
+
+class TimeJobDeadlineResaveQueue {
+
+  private static $theQueue = array();
+
+  public static function getJobs() {
+    return self::$theQueue;
+  }
+
+  public static function setJobs( $job_nids ) {
+    self::$theQueue = $job_nids;
+  }
+
+  private static function discardJobs() {
+    self::$theQueue = array();
+  }
+
+  public static function resaveJobs() {
+    if ( is_array( self::$theQueue ) ) {
+      foreach ( self::$theQueue as $nid ) {
+        node_save( node_load( $nid ) );
+      }
+      self::discardJobs();
+    }
+  }
+}
+

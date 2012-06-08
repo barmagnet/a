@@ -1,0 +1,5 @@
+; $Id
+name = Time job deadline
+description = Manage the calculation of job deadlines
+package = Custom
+core = 7.x

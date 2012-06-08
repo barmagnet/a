@@ -60,7 +60,8 @@ function time_add_visit_page_access( $job, $verbose=TRUE ) {
     return FALSE;
 
   }
-  else if ( user_access( 'create visits for other users' ) ) {
+  else if ( user_access( 'create visits for other users' )  ||
+      user_access( 'create arbitrary visits' ) ) {
     return TRUE;
   }
   else {
