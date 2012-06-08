@@ -168,10 +168,25 @@ class TimeJobDeadlineResaveQueue {
   public static function resaveJobs() {
     if ( is_array( self::$theQueue ) ) {
       foreach ( self::$theQueue as $nid ) {
-        node_save( node_load( $nid ) );
+        $job = node_load( $nid );
+        if ( $job ) {
+          node_save( $job );
+        }
       }
       self::discardJobs();
     }
   }
 }
 
+
+function time_job_deadline_views_query_alter($view) {
+  if($view->name == 'available_jobs' && !empty( $view->query ) ) {
+    $view->query->orderby[0]['field'] =
+      "(field_data_field_job_deadline_field_job_deadline_value = '')";
+    dsm( __FUNCTION__ );
+    dsm($view);
+  }
+  else {
+    dsm( $view );
+  }
+}
