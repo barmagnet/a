@@ -16,3 +16,35 @@
   float:right;
   margin-right: 25px;
 }
+
+
+.view-available-jobs thead tr {
+}
+
+.view-available-jobs table {
+  border-collapse: separate;
+  border-spacing: 0 5px;
+}
+
+.view-available-jobs .job-status-1 .views-field-field-job-summary {
+  border-color: blue;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.view-available-jobs .job-status-4 .views-field-field-job-summary {
+  border-color: red;
+  border-width: 2px;
+  border-style: dashed;
+}
+
+/*
+.view-available-jobs .job-status-5 .views-field-field-job-summary {
+  border-top-color: red;
+  border-right-color: red;
+  border-bottom-color: blue;
+  border-left-color: blue;
+  border-width: 2px 2px 1px 1px;
+  border-style: dashed dashed solid solid;
+}
+*/
