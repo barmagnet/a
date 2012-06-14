@@ -1,5 +1,5 @@
 ; $Id
-name = Time multi date
-description = Fixes and improvements related to multi-date fields
+name = Time views distinct
+description = Remove duplicate nodes from specific views
 package = Custom
 core = 7.x

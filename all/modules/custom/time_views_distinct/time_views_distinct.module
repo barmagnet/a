@@ -2,18 +2,18 @@
 
 /**
  * @file
- * Fixes and enhancements relating to multi-date fields.
+ * Remove duplicate nodes from specific views.
  */
 
 
 /*
  * Implements hook_views_post_execute()
  */
-function time_multi_date_views_post_execute( &$view ) {
+function time_views_distinct_views_post_execute( &$view ) {
 
   switch ( $view->name ) {
-  case 'any_view_where_multiple_value_date_fields_are_used' :
-    _time_multi_date_remove_duplicate_nodes( $view );
+  case 'name of any view from which you want to eliminate duplicates' :
+    _time_views_distinct_remove_duplicate_nodes( $view );
     break;
   }
 }
@@ -24,7 +24,7 @@ function time_multi_date_views_post_execute( &$view ) {
  * @param $view
  *   The view object passed to hook_views_post_execute()
  */
-function _time_multi_date_remove_duplicate_nodes( &$view ) {
+function _time_views_distinct_remove_duplicate_nodes( &$view ) {
 
   $nids_found = array();
   $new_view_result = array();
@@ -38,6 +38,9 @@ function _time_multi_date_remove_duplicate_nodes( &$view ) {
       $nids_found[] = $row->nid;
     }
   }
+
+  dsm( $view->result );
+  dsm( $new_view_result );
 
   $view->result = $new_view_result;
 }
