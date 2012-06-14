@@ -14,8 +14,6 @@ function computed_field_field_job_deadline_compute(
   $langcode,
   $items
 ){
-  //dsm( func_get_args() );
-
   if ( $entity_type != 'node' || $entity->type != 'job' ) {
     return;
   }
@@ -40,17 +38,12 @@ function computed_field_field_job_deadline_compute(
     ->orderBy( 'date.field_visit_date_value', 'ASC' )
     ->range( 0, 1 );
 
-  //dsm( $query->__toString() );
-
   $result = $query->execute()->fetchField();
-
-  //dsm( $result );
 
   $entity_field[0]['value'] = $result ? $result : '';
 }
 
 function time_job_deadline_node_presave( $node ) {
-  //dsm( $node );
 
   if ( $node->type != 'visit' ) {
     return;
@@ -58,7 +51,6 @@ function time_job_deadline_node_presave( $node ) {
   else if ( _time_job_deadline_is_change_in_relevant_job( $node ) ) {
 
     _time_job_deadline_queue_resaving_relevant_jobs( $node );
-    //dsm( 'job change');
   }
   else if ( _time_job_deadline_is_relevant_job( $node ) ) {
 
@@ -66,9 +58,32 @@ function time_job_deadline_node_presave( $node ) {
       _time_job_deadline_is_change_in_time( $node ) ) {
 
         _time_job_deadline_queue_resaving_relevant_jobs( $node );
-        //dsm( 'time or sw change');
       }
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter for node_delete_confirm form.
+ *
+ * Queue relevant Job for resave when an unassigned Visit is deleted.
+ * HACK: This will obviously only work when an individual node is deleted
+ * through the UI. It won't work for bulk deletions or deletions in code.
+ * I took this approach because I couldn't find a hook that is triggered
+ * *after* a node is deleted. According to docs...
+ * http://api.drupal.org/api/drupal/modules%21node%21node.api.php/group/node_api_hooks/7
+ * ...all relevant hooks are called before deletion.
+ */
+function time_job_deadline_form_node_delete_confirm_alter(&$form, &$form_state, $form_id) {
+
+  $node = $form['#node'];
+
+  if ( $node->type == 'visit' &&
+    _time_job_deadline_is_relevant_job( $node ) &&
+    empty( $node->field_visit_sw['und'][0]['target_id'] ) ) {
+
+      _time_job_deadline_queue_resaving_relevant_jobs( $node );
+      $form['#submit'][] = '_time_job_deadline_delete_confirm_submit';
+    }
 }
 
 function time_job_deadline_node_insert( $node ) {
@@ -81,6 +96,10 @@ function time_job_deadline_node_update( $node ) {
   if ( $node->type == 'visit' ) {
     TimeJobDeadlineResaveQueue::resaveJobs();
   }
+}
+
+function _time_job_deadline_delete_confirm_submit() {
+  TimeJobDeadlineResaveQueue::resaveJobs();
 }
 
 function _time_job_deadline_is_change_in_relevant_job( $visit ) {
@@ -179,9 +198,9 @@ class TimeJobDeadlineResaveQueue {
 }
 
 
-function time_job_deadline_views_query_alter($view) {
-  if($view->name == 'available_jobs' && !empty( $view->query ) ) {
-    $view->query->orderby[0]['field'] =
+function time_job_deadline_views_query_alter( $view, $query ) {
+  if ( $view->name == 'available_jobs' ) {
+    $query->orderby[0]['field'] =
       "(field_data_field_job_deadline_field_job_deadline_value = '')";
   }
 }
