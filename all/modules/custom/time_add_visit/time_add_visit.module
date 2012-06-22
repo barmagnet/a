@@ -177,7 +177,7 @@ function time_add_visit_block_info() {
   return array(
 
     'go-to-add-visit' => array(
-      'info' => 'Got to add-visit page for current job',
+      'info' => 'Go to add-visit page for current job',
       'cache' => DRUPAL_CACHE_PER_USER,
     ),
   );
@@ -220,7 +220,7 @@ function _time_add_visit_go_to_add_visit_block_content() {
   return drupal_get_form( '_time_add_visit_go_to_add_visit_form' );
 }
 
-function _time_add_visit_go_to_add_visit_form($form, &$form_state) {
+function _time_add_visit_go_to_add_visit_form() {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Add visit'),
