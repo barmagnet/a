@@ -1,0 +1,5 @@
+; $Id
+name = Time emails
+description = Defines the various emails sent by the Time website.
+package = Custom
+core = 7.x

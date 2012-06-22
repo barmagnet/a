@@ -1,0 +1,125 @@
+<?php
+
+/**
+ * @file
+ * Defines the various emails sent by the Time website.
+ */
+
+function time_emails_menu() {
+  return array(
+
+    'job/%node/email-all' => array(
+      'title' => 'Email current job to all support workers', 
+      'page callback' => 'drupal_get_form', 
+      'page arguments' =>
+        array( '_time_emails_email_cur_job_to_all_sw_confirm', 1 ), 
+      'access callback' => 'user_access', 
+      'access arguments' => array('administer jobs'), 
+      'type' => MENU_CALLBACK,
+    ),
+
+  );
+}
+
+function time_emails_mail($key, &$message, $params) {
+
+  switch ( $key ) {
+ 
+  case 'generic-mail' :
+    if (isset($params['subject'])) {
+      $message['subject'] = $params['subject'];
+    } 
+    if (isset($params['body'])) {
+      $message['body'][] = $params['body']; 
+    }
+    if (isset($params['headers']) && is_array($params['headers'])) {   
+      $message['headers'] += $params['headers'];
+    }
+    break;
+
+  }
+}
+
+
+function time_emails_block_info() {
+  return array(
+
+    'email-cur-job-to-all-sw' => array(
+      'info' => 'Email the current job to all support workers',
+    ),
+
+    'email-all-assignees-of-cur-job' => array(
+      'info' => 'Email all assignees of the current job',
+    ),
+
+    'email-all-active-sw' => array(
+      'info' => 'Email all active support workers',
+    ),
+  );
+}
+
+function time_emails_block_view( $delta ) {
+
+  switch ( $delta ) {
+  case 'email-cur-job-to-all-sw' :
+    return array( 'content' => _time_emails_email_cur_job_to_all_sw_content() );
+
+  case 'email-all-assignees-of-cur-job' :
+    return array( 'content' => _time_emails_email_all_assignees_of_cur_job_content() );
+
+  case 'email-all-active-sw' :
+    return array( 'content' => _time_emails_email_all_active_sw_content() );
+  }
+}
+
+function _time_emails_email_cur_job_to_all_sw_content() {
+  return drupal_get_form( '_time_emails_email_cur_job_to_all_sw_form' );
+}
+
+function _time_emails_email_cur_job_to_all_sw_form() {
+  dsm( func_get_args() );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Email job to all'),
+  );
+  $form['job-nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(1),
+  );
+  return $form;
+
+}
+
+function _time_emails_email_cur_job_to_all_sw_form_submit( $form, &$form_state ) {
+  $nid = $form_state['values']['job-nid'];
+  $form_state['redirect'][] = 'job/' . $nid . '/email-all';
+}
+
+function _time_emails_email_cur_job_to_all_sw_confirm( $form, &$form_state, $job ) {
+dsm( $job );
+  $form['job'] = array(
+    '#type' => 'hidden', 
+    '#value' => $job,
+  );
+
+  return confirm_form(
+    $form, 
+    t( 'Email this job to all support workers?' ), 
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/' . $job->nid, 
+    t('If you choose "Email" then all active support workers will be emailed details of the "%title" job.', array('%title' => $job->title)), 
+    t('Email'), 
+    t('Cancel')
+  );
+}
+
+function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_state ) {
+  $job_nid = $form_state['values']['job-nid'];
+
+  if ( $form_state['values']['confirm'] ) {
+    _time_emails_email_cur_job_to_all_sw( $job_nid )
+  }
+
+  $form_state['redirect'][] = 'node/' . $job_nid;
+}
+
