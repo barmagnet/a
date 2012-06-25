@@ -6,6 +6,17 @@
  * Relies on the Rules module to do the actual email sending.
  */
 
+function time_emails_permission() {
+  return array(
+
+    'email staff' => array(
+      'title' => 'Send emails to staff members',
+      'description' => 'May send emails to other staff, e.g. to notify them about jobs.',
+    ),
+
+  );
+}
+
 function time_emails_menu() {
   return array(
 
@@ -15,7 +26,7 @@ function time_emails_menu() {
       'page arguments' =>
         array( '_time_emails_email_cur_job_to_all_sw_confirm', 1 ), 
       'access callback' => 'user_access', 
-      'access arguments' => array('administer jobs'), 
+      'access arguments' => array('email staff'), 
       'type' => MENU_CALLBACK,
     ),
 
@@ -43,7 +54,13 @@ function time_emails_block_view( $delta ) {
 
   switch ( $delta ) {
   case 'email-cur-job-to-all-sw' :
-    return array( 'content' => _time_emails_email_cur_job_to_all_sw_content() );
+    dsm( user_access( 'email staff' ) );
+    if ( _time_emails_is_view_job_node() && user_access( 'email staff') ) {
+      return array( 'content' => _time_emails_email_cur_job_to_all_sw_content() );
+    }
+    else {
+      return array( 'content' => '' );
+    }
 
   case 'email-all-assignees-of-cur-job' :
     return array( 'content' => _time_emails_email_all_assignees_of_cur_job_content() );
@@ -51,6 +68,31 @@ function time_emails_block_view( $delta ) {
   case 'email-all-active-sw' :
     return array( 'content' => _time_emails_email_all_active_sw_content() );
   }
+}
+
+function _time_emails_is_view_job_node() {
+
+  $op = arg(2);
+  $is_viewing_node =
+    arg(0) == 'node'  &&  is_numeric( arg(1) ) &&  empty( $op );
+
+  if ( ! $is_viewing_node ) {
+    return FALSE;
+    // @todo use context module or path alias to stop block showing
+    // on sub-paths of node view, e.g. node/view/edit
+    //return t('Error: "Add visit" block on page other than node-view' );
+  }
+
+  $node = node_load( arg(1) );
+
+  if ( $node->type != 'job' ) {
+    return FALSE;
+    // @todo use context module or path alias to stop block showing
+    // when viewing nodes other than Jobs.
+    //return t('Error: "Add visit" block on non-job node-view page' );
+  }
+
+  return TRUE;
 }
 
 function _time_emails_email_cur_job_to_all_sw_content() {
