@@ -54,7 +54,6 @@ function time_emails_block_view( $delta ) {
 
   switch ( $delta ) {
   case 'email-cur-job-to-all-sw' :
-    dsm( user_access( 'email staff' ) );
     if ( _time_emails_is_view_job_node() && user_access( 'email staff') ) {
       return array( 'content' => _time_emails_email_cur_job_to_all_sw_content() );
     }
@@ -146,6 +145,7 @@ function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_stat
 }
 
 function _time_emails_email_cur_job_to_all_sw( $job ) {
+  dsm( $job );
   rules_invoke_event( 'email-job-to-all', $job );
 }
 
