@@ -138,14 +138,10 @@ function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_stat
   $job = node_load( $form_state['values']['job-nid'] );
 
   if ( $form_state['values']['confirm'] ) {
-    _time_emails_email_cur_job_to_all_sw( $job );
+    rules_invoke_event( 'time_emails_job_to_all', $job );
   }
 
   $form_state['redirect'][] = 'node/' . $job->nid;
-}
-
-function _time_emails_email_cur_job_to_all_sw( $job ) {
-  rules_invoke_event( 'time_emails_job_to_all', $job );
 }
 
 
