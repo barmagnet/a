@@ -2,14 +2,15 @@
 
 /**
  * @file
- * Defines the various emails sent by the Time website.
+ * Provides UI for sending various emails.
+ * Relies on the Rules module to do the actual email sending.
  */
 
 function time_emails_menu() {
   return array(
 
-    'job/%node/email-all' => array(
-      'title' => 'Email current job to all support workers', 
+    'job/%node/confirm-email-all' => array(
+      'title' => 'Confirm email current job to all support workers', 
       'page callback' => 'drupal_get_form', 
       'page arguments' =>
         array( '_time_emails_email_cur_job_to_all_sw_confirm', 1 ), 
@@ -20,26 +21,6 @@ function time_emails_menu() {
 
   );
 }
-
-function time_emails_mail($key, &$message, $params) {
-
-  switch ( $key ) {
- 
-  case 'generic-mail' :
-    if (isset($params['subject'])) {
-      $message['subject'] = $params['subject'];
-    } 
-    if (isset($params['body'])) {
-      $message['body'][] = $params['body']; 
-    }
-    if (isset($params['headers']) && is_array($params['headers'])) {   
-      $message['headers'] += $params['headers'];
-    }
-    break;
-
-  }
-}
-
 
 function time_emails_block_info() {
   return array(
@@ -77,7 +58,6 @@ function _time_emails_email_cur_job_to_all_sw_content() {
 }
 
 function _time_emails_email_cur_job_to_all_sw_form() {
-  dsm( func_get_args() );
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -93,14 +73,14 @@ function _time_emails_email_cur_job_to_all_sw_form() {
 
 function _time_emails_email_cur_job_to_all_sw_form_submit( $form, &$form_state ) {
   $nid = $form_state['values']['job-nid'];
-  $form_state['redirect'][] = 'job/' . $nid . '/email-all';
+  $form_state['redirect'][] = 'job/' . $nid . '/confirm-email-all';
 }
 
 function _time_emails_email_cur_job_to_all_sw_confirm( $form, &$form_state, $job ) {
-dsm( $job );
-  $form['job'] = array(
+
+  $form['job-nid'] = array(
     '#type' => 'hidden', 
-    '#value' => $job,
+    '#value' => $job->nid,
   );
 
   return confirm_form(
@@ -114,12 +94,40 @@ dsm( $job );
 }
 
 function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_state ) {
-  $job_nid = $form_state['values']['job-nid'];
+  $job = node_load( $form_state['values']['job-nid'] );
 
   if ( $form_state['values']['confirm'] ) {
-    _time_emails_email_cur_job_to_all_sw( $job_nid )
+    _time_emails_email_cur_job_to_all_sw( $job );
   }
 
-  $form_state['redirect'][] = 'node/' . $job_nid;
+  $form_state['redirect'][] = 'node/' . $job->nid;
 }
 
+function _time_emails_email_cur_job_to_all_sw( $job ) {
+  rules_invoke_event( 'email-job-to-all', $job );
+}
+
+
+
+
+
+/*
+function time_emails_mail($key, &$message, $params) {
+
+  switch ( $key ) {
+ 
+  case 'generic-mail' :
+    if (isset($params['subject'])) {
+      $message['subject'] = $params['subject'];
+    } 
+    if (isset($params['body'])) {
+      $message['body'][] = $params['body']; 
+    }
+    if (isset($params['headers']) && is_array($params['headers'])) {   
+      $message['headers'] += $params['headers'];
+    }
+    break;
+
+  }
+}
+ */
