@@ -145,8 +145,7 @@ function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_stat
 }
 
 function _time_emails_email_cur_job_to_all_sw( $job ) {
-  dsm( $job );
-  rules_invoke_event( 'email-job-to-all', $job );
+  rules_invoke_event( 'time_emails-job_to_all', $job );
 }
 
 
