@@ -15,7 +15,12 @@
 }
 
 
-#block-time-emails-email-cur-job-to-all-sw .block-content {
+#block-time-emails-email-all-assignees-of-cur-job .block-content {
+  float:right;
+  margin-right: 10px;
+}
+
+#block-time-emails-email-cur-job-to-all-sw {
   float:right;
 }
 

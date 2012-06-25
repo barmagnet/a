@@ -15,5 +15,24 @@ function time_emails_rules_event_info() {
     'skip save' => TRUE,
     );
  
+  $events['time_emails_job_assignees'] = array(
+    'label' => 'Email assignees of current job',
+    'group' => 'Time custom events',
+    'help' => 'Assignees og the current job will be sent an email.',
+    'variables' => array(),
+    );
+
+  $events['time_emails_job_assignees']['variables']['body_text'] = array(
+    'label' => 'Body text',
+    'type' => 'text',
+    'skip save' => TRUE,
+    );
+ 
+  $events['time_emails_job_assignees']['variables']['job'] = array(
+    'label' => 'Job',
+    'type' => 'node',
+    'skip save' => TRUE,
+    );
+ 
   return $events;
 }

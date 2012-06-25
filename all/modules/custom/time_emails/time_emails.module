@@ -21,10 +21,22 @@ function time_emails_menu() {
   return array(
 
     'job/%node/confirm-email-all' => array(
+
       'title' => 'Confirm email current job to all support workers', 
       'page callback' => 'drupal_get_form', 
       'page arguments' =>
         array( '_time_emails_email_cur_job_to_all_sw_confirm', 1 ), 
+      'access callback' => 'user_access', 
+      'access arguments' => array('email staff'), 
+      'type' => MENU_CALLBACK,
+    ),
+
+    'job/%node/email-assignees' => array(
+
+      'title' => 'Email all staff assigned to the current job', 
+      'page callback' => 'drupal_get_form', 
+      'page arguments' =>
+        array( '_time_emails_email_assignees_of_cur_job_confirm', 1 ), 
       'access callback' => 'user_access', 
       'access arguments' => array('email staff'), 
       'type' => MENU_CALLBACK,
@@ -54,7 +66,7 @@ function time_emails_block_view( $delta ) {
 
   switch ( $delta ) {
   case 'email-cur-job-to-all-sw' :
-    if ( _time_emails_is_view_job_node() && user_access( 'email staff') ) {
+    if ( _time_emails_is_view_job_node() && user_access( 'email staff' ) ) {
       return array( 'content' => _time_emails_email_cur_job_to_all_sw_content() );
     }
     else {
@@ -62,7 +74,13 @@ function time_emails_block_view( $delta ) {
     }
 
   case 'email-all-assignees-of-cur-job' :
-    return array( 'content' => _time_emails_email_all_assignees_of_cur_job_content() );
+    if ( _time_emails_is_view_job_node() && user_access( 'email staff' ) ) {
+      dsm( $delta );
+      return array( 'content' => _time_emails_email_assignees_of_cur_job_content() );
+    }
+    else {
+      return array( 'content' => '' );
+    }
 
   case 'email-all-active-sw' :
     return array( 'content' => _time_emails_email_all_active_sw_content() );
@@ -139,6 +157,65 @@ function _time_emails_email_cur_job_to_all_sw_confirm_submit( $form, &$form_stat
 
   if ( $form_state['values']['confirm'] ) {
     rules_invoke_event( 'time_emails_job_to_all', $job );
+  }
+
+  $form_state['redirect'][] = 'node/' . $job->nid;
+}
+
+
+function _time_emails_email_assignees_of_cur_job_content() {
+  return drupal_get_form( '_time_emails_email_assignees_of_cur_job_form' );
+}
+
+function _time_emails_email_assignees_of_cur_job_form() {
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Email assignees'),
+  );
+  $form['job-nid'] = array(
+    '#type' => 'hidden',
+    '#value' => arg(1),
+  );
+  return $form;
+
+}
+
+function _time_emails_email_assignees_of_cur_job_form_submit( $form, &$form_state ) {
+  $nid = $form_state['values']['job-nid'];
+  $form_state['redirect'][] = 'job/' . $nid . '/email-assignees';
+}
+
+function _time_emails_email_assignees_of_cur_job_confirm( $form, &$form_state, $job ) {
+
+  $form['job-nid'] = array(
+    '#type' => 'hidden', 
+    '#value' => $job->nid,
+  );
+
+  $form['email-text'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Email body text'),
+    '#description' => t( 'Type the text of the email that you wish to to send to all assignees of the "%title" job.', array('%title' => $job->title)), 
+  );
+
+  return confirm_form(
+    $form, 
+    t( 'Email all assignees of this job.' ), 
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/' . $job->nid, 
+    t('When you click "Email", all staff members assigned to the "%title" job will be sent an email. The email will include any email body text that you have written above. It will also include the job summary.', array('%title' => $job->title)), 
+    t('Email'), 
+    t('Cancel')
+  );
+}
+
+function _time_emails_email_assignees_of_cur_job_confirm_submit( $form, &$form_state ) {
+
+  $text = node_load( $form_state['values']['email-text'] );
+  $job = node_load( $form_state['values']['job-nid'] );
+
+  if ( $form_state['values']['confirm'] ) {
+    rules_invoke_event( 'time_emails_job_assignees', $text, $job );
   }
 
   $form_state['redirect'][] = 'node/' . $job->nid;
