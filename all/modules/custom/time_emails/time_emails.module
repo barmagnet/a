@@ -75,7 +75,6 @@ function time_emails_block_view( $delta ) {
 
   case 'email-all-assignees-of-cur-job' :
     if ( _time_emails_is_view_job_node() && user_access( 'email staff' ) ) {
-      dsm( $delta );
       return array( 'content' => _time_emails_email_assignees_of_cur_job_content() );
     }
     else {
@@ -211,7 +210,7 @@ function _time_emails_email_assignees_of_cur_job_confirm( $form, &$form_state, $
 
 function _time_emails_email_assignees_of_cur_job_confirm_submit( $form, &$form_state ) {
 
-  $text = node_load( $form_state['values']['email-text'] );
+  $text = $form_state['values']['email-text'];
   $job = node_load( $form_state['values']['job-nid'] );
 
   if ( $form_state['values']['confirm'] ) {
